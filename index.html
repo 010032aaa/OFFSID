@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>حظر إعلانات يوتيوب</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            width: 200px;
+            padding: 10px;
+        }
+        h2 {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        button {
+            background-color: #ff0000;
+            color: white;
+            border: none;
+            padding: 10px;
+            width: 100%;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #cc0000;
+        }
+    </style>
+</head>
+<body>
+    <h2>🚫 حظر إعلانات يوتيوب</h2>
+    <p>الإضافة تعمل بنجاح!</p>
+    <button id="refresh">إعادة تحميل يوتيوب</button>
+
+    <script>
+        document.getElementById("refresh").addEventListener("click", function() {
+            chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+                chrome.tabs.reload(tabs[0].id);
+            });
+        });
+    </script>
+</body>
+</html>
