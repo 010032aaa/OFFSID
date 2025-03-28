@@ -3,43 +3,397 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>حظر إعلانات يوتيوب</title>
+    <title>إدارة أجهزة البلايستيشن</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            width: 200px;
-            padding: 10px;
-        }
-        h2 {
-            font-size: 18px;
-            margin-bottom: 10px;
-        }
-        button {
-            background-color: #ff0000;
-            color: white;
-            border: none;
-            padding: 10px;
-            width: 100%;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        button:hover {
-            background-color: #cc0000;
-        }
+        body { font-family: Arial, sans-serif; text-align: center; background: url('https://up6.cc/2025/02/174009452653041.png') no-repeat center center fixed; background-size: cover; color: white; }
+        h1 { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); background-color: rgba(0, 0, 0, 0.7); padding: 15px; border-radius: 10px; z-index: 1000; width: 80%; }
+        .container { display: flex; flex-wrap: wrap; justify-content: center; margin-top: 80px; padding-bottom: 120px; }
+        .device { border: 2px solid #fff; padding: 15px; margin: 10px; width: 260px; background: rgba(0, 0, 0, 0.8); border-radius: 10px; text-align: center; transition: 0.3s; }
+        .device.available { background-color: #28a745; }
+        .device.occupied { background-color: #dc3545; }
+        .device.finished { background-color: #007bff; }
+        .device.paused { background-color: #ffc107; color: black; }
+        button { padding: 10px; border: none; cursor: pointer; margin: 5px; border-radius: 5px; transition: 0.3s; }
+        .start-multi { background-color: #007bff; color: white; }
+        .start-single { background-color: #6f42c1; color: white; }
+        .start-open { background-color: #ffc107; color: black; }
+        .end-game { background-color: #dc3545; color: white; }
+        .pause-game { background-color: #ff9800; color: black; }
+        .resume-game { background-color: #17a2b8; color: white; }
+        .reset-device { background-color: #28a745; color: white; }
     </style>
 </head>
 <body>
-    <h2>🚫 حظر إعلانات يوتيوب</h2>
-    <p>الإضافة تعمل بنجاح!</p>
-    <button id="refresh">إعادة تحميل يوتيوب</button>
+    <h1>إدارة أجهزة البلايستيشن</h1>
+    <div id="devices" class="container"></div>
 
     <script>
-        document.getElementById("refresh").addEventListener("click", function() {
-            chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-                chrome.tabs.reload(tabs[0].id);
+        let devices = JSON.parse(localStorage.getItem('devices')) || Array.from({ length: 6 }, (_, i) => ({
+            id: i + 1, status: 'متاح', startTime: null, endTime: null, mode: null, remainingTime: null, price: null
+        }));
+      const alertSounds = [
+    "https://k.top4top.io/m_3373pafzk1.mp3",
+    "https://b.top4top.io/m_337378vyg1.mp3",
+    "https://f.top4top.io/m_3373f1bk11.mp3",
+    "https://k.top4top.io/m_3373wrmjz1.mp3",
+    "https://b.top4top.io/m_3373gsoty1.mp3",
+    "https://c.top4top.io/m_3373vjgdn1.mp3"
+];
+
+function playAlertSound(deviceId) {
+    if (deviceId > 0 && deviceId <= alertSounds.length) {
+        let audio = new Audio(alertSounds[deviceId - 1]);
+        audio.play();
+    } else {
+        console.warn("⚠️ الجهاز غير موجود في قائمة الأصوات!");
+    }
+}
+      function playAlertSound(deviceId) {
+    if (deviceId > 0 && deviceId <= alertSounds.length) {
+        let audio = new Audio(alertSounds[deviceId - 1]);
+        audio.play().catch(error => console.error("🔴 خطأ في تشغيل الصوت:", error));
+    } else {
+        console.warn("⚠️ الجهاز غير موجود في قائمة الأصوات!");
+    }
+}
+
+      
+      let gameLog = JSON.parse(localStorage.getItem("gameLog")) || [];
+
+// دالة فتح/إغلاق سجل اللعب
+function toggleLog() {
+    let logContainer = document.getElementById("logContainer");
+    logContainer.style.display = logContainer.style.display === "none" ? "block" : "none";
+    updateLogTable();
+}
+
+// دالة تحديث بيانات سجل الجلسات في الجدول
+function updateLogTable() {
+    let logTable = document.getElementById("logTable");
+    let totalEarningsElem = document.getElementById("totalEarnings");
+    logTable.innerHTML = "";
+    let totalEarnings = 0;
+
+    gameLog.forEach((entry, index) => {
+        totalEarnings += entry.price;
+        let row = `<tr>
+            <td>${entry.deviceId}</td>
+            <td>${entry.playDuration} دقيقة</td>
+            <td>${new Date(entry.startTime).toLocaleTimeString('ar-EG')}</td>
+            <td>${new Date(entry.endTime).toLocaleTimeString('ar-EG')}</td>
+            <td>${entry.price} جنيه</td>
+            <td>${entry.mode === 'multi' ? 'مالتي' : 'فردي'}</td>
+            <td><button onclick="deleteLogEntry(${index})" style="background-color: red; color: white; border: none; padding: 5px; cursor: pointer;">🗑️</button></td>
+        </tr>`;
+        logTable.innerHTML += row;
+    });
+
+    totalEarningsElem.textContent = totalEarnings;
+}
+
+// دالة لحذف السجل بالكامل
+function deleteLog() {
+    if (confirm("هل أنت متأكد من حذف السجل بالكامل؟")) {
+        gameLog = [];
+        localStorage.removeItem("gameLog");
+        updateLogTable();
+    }
+}
+
+// دالة لحذف جلسة معينة من السجل
+function deleteLogEntry(index) {
+    if (confirm("هل تريد حذف هذه الجلسة؟")) {
+        gameLog.splice(index, 1);
+        localStorage.setItem("gameLog", JSON.stringify(gameLog));
+        updateLogTable();
+    }
+}
+
+      
+
+      function updateDevices() {
+    let container = document.getElementById('devices');
+    container.innerHTML = '';
+    let now = Date.now();
+
+    devices.forEach(device => {
+        if (device.status === 'مشغول' && device.endTime) {
+            device.remainingTime = Math.max(0, Math.ceil((device.endTime - now) / 1000));
+
+            if (device.remainingTime <= 0) {
+                playAlertSound(device.id);
+                endDevice(device.id);
+            }
+        }
+                let div = document.createElement('div');
+                div.className = `device ${device.status === 'متاح' ? 'available' 
+                    : device.status === 'مشغول' ? 'occupied' 
+                    : device.status === 'متوقف' ? 'paused' 
+                    : 'finished'}`;
+                div.innerHTML = `
+                    <h3>جهاز ${device.id}</h3>
+                    <p>الحالة: ${device.status}</p>
+                    <p>نوع اللعب: ${device.mode ? (device.mode === 'multi' ? 'مالتي' : device.mode === 'single' ? 'فردي' : 'وقت مفتوح') : 'غير محدد'}</p>
+                    ${device.startTime ? `<p>وقت البداية: ${new Date(device.startTime).toLocaleTimeString('ar-EG')}</p>` : ''}
+                    ${device.endTime ? `<p>وقت النهاية: ${new Date(device.endTime).toLocaleTimeString('ar-EG')}</p>` : ''}
+                    ${device.remainingTime !== null && device.status === 'مشغول' ? `<p>الوقت المتبقي: ${Math.floor(device.remainingTime / 60)} دقيقة و ${device.remainingTime % 60} ثانية</p>` : ''}
+                    ${device.status === 'متوقف' ? `<p>اللعبة متوقفة مؤقتًا</p>` : ''}
+                    ${device.status === 'منتهي' ? `<p>⏳ مدة اللعب: ${device.duration} دقيقة</p><p>💰 السعر: ${device.price} جنيه</p>` : ''}
+
+                    <button class="start-multi" onclick="setDeviceTime(${device.id}, 'multi')">بدء اللعب مالتي</button>
+                    <button class="start-single" onclick="setDeviceTime(${device.id}, 'single')">بدء اللعب فردي</button>
+                    <button class="start-open" onclick="setDeviceTime(${device.id}, 'open')">بدء وقت مفتوح</button>
+                    <button class="end-game" onclick="endDevice(${device.id})" ${device.status !== 'مشغول' ? 'disabled' : ''}>إنهاء اللعب</button>
+                   <button class="toggle-pause" onclick="togglePause(${device.id})" ${device.status === 'متاح' || device.status === 'منتهي' ? 'disabled' : ''}>
+    ${device.status === 'مشغول' ? '⏸️ إيقاف مؤقت' : device.status === 'متوقف' ? '▶️ استئناف' : ''}
+</button>
+
+                    ${device.status === 'منتهي' ? `<button class="reset-device" onclick="resetDevice(${device.id})">إعادة تعيين</button>` : ''}`;
+                container.appendChild(div);
             });
-        });
+            localStorage.setItem("devices", JSON.stringify(devices));
+        }
+
+        function setDeviceTime(id, mode) {
+    let device = devices.find(d => d.id === id);
+    
+    if (mode === 'open') {
+        let gameType = prompt("اختر نوع اللعب:\n1 - مالتي\n2 - فردي");
+        if (gameType === '1') {
+            device.mode = 'multi';
+        } else if (gameType === '2') {
+            device.mode = 'single';
+        } else {
+            alert("خيار غير صالح!");
+            return;
+        }
+
+        device.status = "مشغول";
+        device.startTime = Date.now();
+        device.endTime = null; // لأنه وقت مفتوح
+        device.price = null; // لا يوجد سعر محدد بالوقت
+    } else {
+        let duration = prompt("اختر مدة اللعب بالدقائق:\n1 - 5 - 10 - 15 - 20 - 30 - 60 - 120");
+        if (!duration || isNaN(duration) || duration <= 0) return;
+
+        device.mode = mode;
+        device.price = (mode === 'multi' ? 30 : 20) * (duration / 60);
+        device.status = "مشغول";
+        device.startTime = Date.now();
+        device.endTime = device.startTime + duration * 60000;
+    }
+
+    updateDevices();
+}
+
+
+ function togglePause(id) {
+    let device = devices.find(d => d.id === id);
+    
+    if (device.status === "مشغول") {
+        // حفظ الوقت المتبقي فقط للجلسات المحددة بزمن
+        device.status = "متوقف";
+        device.pausedTime = Date.now();
+        if (device.endTime) {
+            device.remainingTime = Math.max(0, Math.ceil((device.endTime - device.pausedTime) / 1000));
+        }
+    } else if (device.status === "متوقف") {
+        let pausedDuration = Date.now() - device.pausedTime;
+        
+        if (device.endTime) {
+            // تعديل وقت النهاية ليعوض وقت التوقف
+            device.startTime += pausedDuration;
+            device.endTime += pausedDuration;
+        }
+
+        device.status = "مشغول";
+    }
+
+    updateDevices();
+}
+
+
+        function resetDevice(id) {
+    let device = devices.find(d => d.id === id);
+
+    if (device) {
+        // إعادة تعيين جميع القيم إلى الحالة الأصلية
+        device.status = "متاح";
+        device.startTime = null;
+        device.endTime = null;
+        device.mode = null;
+        device.duration = null;
+        device.price = null;
+        device.remainingTime = null;
+
+        updateDevices(); // تحديث الواجهة بعد إعادة التعيين
+    }
+}
+
+
+
+
+
+
+
+        function resetDevice(id) {
+    let device = devices.find(d => d.id === id);
+
+    if (device) {
+        // إعادة تعيين جميع القيم إلى الحالة الأصلية
+        device.status = "متاح";
+        device.startTime = null;
+        device.endTime = null;
+        device.mode = null;
+        device.duration = null;
+        device.price = null;
+        device.remainingTime = null;
+
+        updateDevices(); // تحديث الواجهة بعد إعادة التعيين
+    }
+}
+
+        function endDevice(id) {
+    let device = devices.find(d => d.id === id);
+    if (!device || device.status !== "مشغول") return;
+
+    device.endTime = Date.now(); // تسجيل وقت النهاية
+
+    // ✅ حساب مدة اللعب، مع الأخذ في الاعتبار التوقفات المؤقتة
+    let playDuration = Math.floor(
+        ((device.endTime || Date.now()) - device.startTime - (device.pausedDuration || 0)) / 60000
+    );
+
+    device.duration = playDuration;
+
+    // ✅ حساب السعر إذا لم يكن الوقت مفتوحًا
+    if (device.mode !== 'open') {
+        device.price = (device.mode === 'multi' ? 30 : 20) * (playDuration / 60);
+    } else {
+        device.price = "غير محدد"; // الوقت المفتوح لا يحتوي على سعر محدد
+    }
+
+    device.status = "منتهي";
+
+    // ✅ حفظ بيانات الجلسة الأخيرة في `localStorage`
+    localStorage.setItem("lastSession", JSON.stringify(device));
+
+    // ✅ إضافة الجلسة إلى سجل الجلسات
+    gameLog.push({
+        deviceId: device.id,
+        playDuration: device.duration,
+        startTime: device.startTime,
+        endTime: device.endTime,
+        price: device.price || 0, // في حالة الوقت المفتوح يكون السعر 0
+        mode: device.mode
+    });
+
+    // ✅ حفظ السجل في `localStorage`
+    localStorage.setItem("gameLog", JSON.stringify(gameLog));
+
+    // ✅ تشغيل صوت عند انتهاء الجهاز (اختياري)
+    let audio = new Audio(`sounds/device${id}.mp3`);
+    audio.play();
+
+    updateDevices();
+}
+
+
+
+        setInterval(updateDevices, 1000);
     </script>
+  <button id="showLogBtn" onclick="toggleLog()" style="position: fixed; bottom: 20px; right: 20px; background-color: #17a2b8; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer;">
+    📜 سجل اللعب
+</button>
+  <div id="logContainer" style="display: none; position: fixed; bottom: 50px; right: 20px; background: rgba(0, 0, 0, 0.8); padding: 20px; border-radius: 10px; width: 90%; max-width: 600px; max-height: 400px; overflow-y: auto;">
+    <h2>سجل اللعب</h2>
+    <table border="1" width="100%" style="border-collapse: collapse; color: white; text-align: center;">
+        <thead>
+            <tr>
+                <th>رقم الجهاز</th>
+                <th>مدة اللعب</th>
+                <th>وقت البداية</th>
+                <th>وقت النهاية</th>
+                <th>السعر</th>
+                <th>نوع اللعب</th>
+                <th>حذف</th>
+            </tr>
+        </thead>
+        <tbody id="logTable"></tbody>
+    </table>
+    <p><strong>إجمالي الأرباح: </strong><span id="totalEarnings">0</span> جنيه</p>
+    <button onclick="deleteLog()" style="background-color: red; color: white; padding: 10px; border-radius: 5px; border: none; cursor: pointer;">🗑️ حذف السجل</button>
+    <button onclick="toggleLog()" style="background-color: gray; color: white; padding: 10px; border-radius: 5px; border: none; cursor: pointer;">❌ إغلاق</button>
+</div>
+  <button id="showLogBtn" onclick="toggleLog()" style="position: fixed; bottom: 20px; right: 20px; background-color: #17a2b8; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer;">📜 سجل اللعب</button>
+
+<div id="logContainer" style="display: none; position: fixed; bottom: 50px; right: 20px; background: rgba(0, 0, 0, 0.8); padding: 20px; border-radius: 10px; width: 90%; max-width: 600px; max-height: 400px; overflow-y: auto;">
+    <h2>سجل اللعب</h2>
+    <table border="1" width="100%" style="border-collapse: collapse; color: white; text-align: center;">
+        <thead>
+            <tr>
+                <th>رقم الجهاز</th>
+                <th>مدة اللعب</th>
+                <th>وقت البداية</th>
+                <th>وقت النهاية</th>
+                <th>السعر</th>
+                <th>نوع اللعب</th>
+                <th>حذف</th>
+            </tr>
+        </thead>
+        <tbody id="logTable"></tbody>
+    </table>
+    <p><strong>إجمالي الأرباح:
+      
+
+      <script>
+let gameLog = JSON.parse(localStorage.getItem("gameLog")) || [];
+
+function toggleLog() {
+    let logContainer = document.getElementById("logContainer");
+    logContainer.style.display = logContainer.style.display === "none" ? "block" : "none";
+    updateLogTable();
+}
+
+function updateLogTable() {
+    let logTable = document.getElementById("logTable");
+    let totalEarningsElem = document.getElementById("totalEarnings");
+    logTable.innerHTML = "";
+    let totalEarnings = 0;
+
+    gameLog.forEach((entry, index) => {
+        totalEarnings += entry.price;
+        let row = `<tr>
+            <td>${entry.deviceId}</td>
+            <td>${entry.playDuration} دقيقة</td>
+            <td>${new Date(entry.startTime).toLocaleTimeString('ar-EG')}</td>
+            <td>${new Date(entry.endTime).toLocaleTimeString('ar-EG')}</td>
+            <td>${entry.price} جنيه</td>
+            <td>${entry.mode === 'multi' ? 'مالتي' : 'فردي'}</td>
+            <td><button onclick="deleteLogEntry(${index})" style="background-color: red; color: white; border: none; padding: 5px; cursor: pointer;">🗑️</button></td>
+        </tr>`;
+        logTable.innerHTML += row;
+    });
+
+    totalEarningsElem.textContent = totalEarnings;
+}
+
+function deleteLog() {
+    if (confirm("هل أنت متأكد من حذف السجل بالكامل؟")) {
+        gameLog = [];
+        localStorage.removeItem("gameLog");
+        updateLogTable();
+    }
+}
+
+function deleteLogEntry(index) {
+    if (confirm("هل تريد حذف هذه الجلسة؟")) {
+        gameLog.splice(index, 1);
+        localStorage.setItem("gameLog", JSON.stringify(gameLog));
+        updateLogTable();
+    }
+}
+</script>
+
 </body>
 </html>
